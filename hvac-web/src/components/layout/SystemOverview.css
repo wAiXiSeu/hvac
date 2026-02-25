@@ -1,0 +1,36 @@
+.system-overview {
+  margin-bottom: var(--spacing-xl);
+}
+
+.system-overview__title {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: var(--spacing-lg);
+}
+
+.system-overview__grid {
+  display: flex;
+  gap: var(--spacing-lg);
+}
+
+.system-overview__grid > * {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 1200px) {
+  .system-overview__grid {
+    flex-direction: column;
+  }
+  
+  .system-overview__grid > * {
+    min-width: auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .system-overview__grid {
+    flex-direction: column;
+  }
+}

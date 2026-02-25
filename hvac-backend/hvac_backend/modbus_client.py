@@ -206,10 +206,14 @@ class ModbusClient:
     
     def set_room_setpoint(self, room_id: str, temp: float) -> bool:
         if room_id not in reg.ROOMS:
+            logger.warning(f"Unknown room_id: {room_id}")
             return False
         setpoint_addr = reg.ROOMS[room_id]["setpoint"]
         value = reg.unscale_value(temp, setpoint_addr)
-        return self.write_register(setpoint_addr, value)
+        logger.info(f"Setting {room_id} temperature: {temp}°C -> register {setpoint_addr} = {value}")
+        result = self.write_register(setpoint_addr, value)
+        logger.info(f"Write result: {result}")
+        return result
     
     def write_register_by_address(self, address: int, value: float) -> bool:
         """通过地址写入寄存器"""

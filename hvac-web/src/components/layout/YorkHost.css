@@ -1,0 +1,15 @@
+.york-host {
+  min-height: 200px;
+}
+
+.york-host__content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.york-host__empty {
+  color: var(--color-text-secondary);
+  text-align: center;
+  padding: var(--spacing-lg) 0;
+}

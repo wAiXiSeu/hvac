@@ -1,0 +1,96 @@
+.control-input {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-sm) 0;
+  gap: var(--spacing-md);
+}
+
+.control-input__label {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.control-input__value {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.control-input__value--editable {
+  cursor: pointer;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  transition: all var(--transition-base);
+}
+
+.control-input__value--editable:hover {
+  background: var(--bg-readonly);
+  border-color: var(--border-color);
+}
+
+.control-input__unit {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--color-text-secondary);
+  margin-left: var(--spacing-xs);
+}
+
+.control-input__edit {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
+.control-input__field {
+  width: 80px;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  outline: none;
+  transition: border-color var(--transition-base);
+}
+
+.control-input__field:focus {
+  border-color: var(--color-primary);
+}
+
+.control-input__btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 16px;
+  transition: all var(--transition-base);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.control-input__btn--save {
+  background: var(--color-success);
+  color: white;
+}
+
+.control-input__btn--save:hover {
+  opacity: 0.8;
+}
+
+.control-input__btn--cancel {
+  background: var(--color-error);
+  color: white;
+}
+
+.control-input__btn--cancel:hover {
+  opacity: 0.8;
+}
+
+.control-input__error {
+  font-size: 12px;
+  color: var(--color-error);
+  width: 100%;
+}

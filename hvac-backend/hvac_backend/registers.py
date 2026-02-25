@@ -91,8 +91,13 @@ def unscale_value(value: float, address: int) -> int:
     if address in REGISTERS:
         scaling = REGISTERS[address].get("scaling", 1)
         if scaling == 0.5:
-            return int(value * 2)
-        return int(value / scaling)
+            # 温度设定：20°C -> 40
+            result = int(value * 2)
+            print(f"DEBUG unscale_value: {value}°C * 2 = {result} (address={address}, scaling={scaling})")
+            return result
+        result = int(value / scaling)
+        print(f"DEBUG unscale_value: {value} / {scaling} = {result} (address={address})")
+        return result
     return int(value)
 
 
