@@ -1,0 +1,35 @@
+modbus:
+  host: "192.168.110.200"
+  port: 502
+  slave_id: 1
+  timeout: 5
+
+app:
+  host: "0.0.0.0"
+  port: 8000
+  debug: true
+
+poll:
+  interval: 3
+
+rooms:
+  - id: living_room
+    name: "客厅"
+    temp_register: 1085
+    humidity_register: 1087
+    setpoint_register: 1090
+  - id: master_bedroom
+    name: "主卧"
+    temp_register: 1095
+    humidity_register: 1097
+    setpoint_register: 1101
+  - id: second_bedroom
+    name: "次卧"
+    temp_register: 1105
+    humidity_register: 1107
+    setpoint_register: 1110
+  - id: study_room
+    name: "书房"
+    temp_register: 1117
+    humidity_register: 1119
+    setpoint_register: 1123
