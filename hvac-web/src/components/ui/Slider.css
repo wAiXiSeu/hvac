@@ -9,9 +9,23 @@
   margin-bottom: var(--spacing-sm);
 }
 
+.slider__title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--spacing-sm);
+}
+
 .slider__label {
   font-size: 14px;
   color: var(--color-text-secondary);
+}
+
+.slider__details {
+  font-size: 11px;
+  color: #999;
+  font-family: 'Monaco', 'Consolas', monospace;
+  opacity: 0.7;
+  white-space: nowrap;
 }
 
 .slider__value {

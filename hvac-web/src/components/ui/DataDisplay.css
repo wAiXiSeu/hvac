@@ -16,6 +16,12 @@
   flex: 1;
 }
 
+.data-display__header {
+  display: flex;
+  align-items: baseline;
+  gap: var(--spacing-sm);
+}
+
 .data-display__label {
   font-size: 14px;
   color: var(--color-text-secondary);
@@ -32,4 +38,12 @@
   font-weight: 400;
   color: var(--color-text-secondary);
   margin-left: var(--spacing-xs);
+}
+
+.data-display__details {
+  font-size: 11px;
+  color: #999;
+  font-family: 'Monaco', 'Consolas', monospace;
+  opacity: 0.7;
+  white-space: nowrap;
 }

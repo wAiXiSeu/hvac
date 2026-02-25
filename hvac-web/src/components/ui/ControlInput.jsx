@@ -9,7 +9,10 @@ export function ControlInput({
   max, 
   step = 0.5, 
   onSave, 
-  disabled = false 
+  disabled = false,
+  address,
+  rawValue,
+  showDetails = true
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [inputValue, setInputValue] = useState(value);
@@ -66,7 +69,15 @@ export function ControlInput({
 
   return (
     <div className="control-input">
-      <span className="control-input__label">{label}</span>
+      <div className="control-input__header">
+        <span className="control-input__label">{label}</span>
+        {showDetails && (address !== undefined || rawValue !== undefined) && (
+          <span className="control-input__details">
+            {address !== undefined && `[${address}]`}
+            {rawValue !== undefined && ` = ${rawValue}`}
+          </span>
+        )}
+      </div>
       {isEditing ? (
         <div className="control-input__edit">
           <input

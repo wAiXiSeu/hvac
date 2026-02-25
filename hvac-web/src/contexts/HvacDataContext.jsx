@@ -32,30 +32,30 @@ export function HvacDataProvider({ children }) {
 
         const grouped = groupedRes.data;
 
-        // 提取环境监测数据
+        // 提取环境监测数据（保留完整对象）
         const envGroup = grouped.environment?.registers || {};
         setEnvironment({
-          pm25: envGroup[1024]?.value,
-          co2: envGroup[1026]?.value,
-          outdoor_temp: envGroup[1027]?.value,
-          outdoor_humidity: envGroup[1028]?.value
+          pm25: envGroup[1024],
+          co2: envGroup[1026],
+          outdoor_temp: envGroup[1027],
+          outdoor_humidity: envGroup[1028]
         });
 
-        // 提取约克主机数据
+        // 提取约克主机数据（保留完整对象）
         const yorkGroup = grouped.york?.registers || {};
         setYork({
-          supplyTemp: yorkGroup[1029]?.value,
-          returnTemp: yorkGroup[1030]?.value,
-          heatingSetpoint: yorkGroup[1062]?.value,
-          coolingSetpoint: yorkGroup[1066]?.value
+          supplyTemp: yorkGroup[1029],
+          returnTemp: yorkGroup[1030],
+          heatingSetpoint: yorkGroup[1062],
+          coolingSetpoint: yorkGroup[1066]
         });
 
-        // 提取新风系统数据
+        // 提取新风系统数据（保留完整对象）
         const freshAirGroup = grouped.fresh_air?.registers || {};
         setFreshAir({
-          compressorFreq: freshAirGroup[1161]?.value,
-          supplyTemp: freshAirGroup[1164]?.value,
-          returnTemp: freshAirGroup[1165]?.value,
+          compressorFreq: freshAirGroup[1161],
+          supplyTemp: freshAirGroup[1164],
+          returnTemp: freshAirGroup[1165],
           statusCode: freshAirGroup[1049]?.value,
           humidifier: freshAirGroup[1168]?.value,
           fanSpeed: sysRes.data.fan_speed

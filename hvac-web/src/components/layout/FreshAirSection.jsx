@@ -36,18 +36,27 @@ export function FreshAirSection() {
           <div className="fresh-air-section__status">
             <DataDisplay 
               label="压缩机频率" 
-              value={freshAir.compressorFreq?.toFixed(0)} 
+              value={freshAir.compressorFreq?.value?.toFixed(0)} 
               unit="Hz"
+              address={freshAir.compressorFreq?.address}
+              rawValue={freshAir.compressorFreq?.raw}
+              showDetails={true}
             />
             <DataDisplay 
               label="供水温度" 
-              value={freshAir.supplyTemp?.toFixed(1)} 
+              value={freshAir.supplyTemp?.value?.toFixed(1)} 
               unit="°C"
+              address={freshAir.supplyTemp?.address}
+              rawValue={freshAir.supplyTemp?.raw}
+              showDetails={true}
             />
             <DataDisplay 
               label="回水温度" 
-              value={freshAir.returnTemp?.toFixed(1)} 
+              value={freshAir.returnTemp?.value?.toFixed(1)} 
               unit="°C"
+              address={freshAir.returnTemp?.address}
+              rawValue={freshAir.returnTemp?.raw}
+              showDetails={true}
             />
             <div className={`fresh-air-section__status-indicator ${isNormalStatus(freshAir.statusCode) ? 'fresh-air-section__status-indicator--normal' : 'fresh-air-section__status-indicator--warning'}`}>
               <span className="fresh-air-section__status-label">运行状态</span>

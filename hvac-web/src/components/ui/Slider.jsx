@@ -9,7 +9,10 @@ export function Slider({
   step = 1, 
   unit = '%',
   onChange, 
-  disabled = false 
+  disabled = false,
+  address,
+  rawValue,
+  showDetails = true
 }) {
   const [localValue, setLocalValue] = useState(value);
   const [isChanging, setIsChanging] = useState(false);
@@ -37,7 +40,15 @@ export function Slider({
   return (
     <div className="slider">
       <div className="slider__header">
-        <span className="slider__label">{label}</span>
+        <div className="slider__title">
+          <span className="slider__label">{label}</span>
+          {showDetails && (address !== undefined || rawValue !== undefined) && (
+            <span className="slider__details">
+              {address !== undefined && `[${address}]`}
+              {rawValue !== undefined && ` = ${rawValue}`}
+            </span>
+          )}
+        </div>
         <span className="slider__value">{localValue}{unit}</span>
       </div>
       <div className="slider__track-container">

@@ -123,9 +123,12 @@ class ModbusClient:
                             self.grouped_data[group] = {}
                         self.grouped_data[group][address] = {
                             "name": info["name"],
+                            "address": address,
+                            "raw": raw_value,
                             "value": scaled_value,
                             "unit": info["unit"],
                             "rw": info["rw"],
+                            "desc": info["desc"],
                         }
                         
                 except Exception as e:
@@ -161,7 +164,7 @@ class ModbusClient:
         return result
     
     def get_system(self) -> dict:
-        """获取系统数据（兼容旧接口）"""
+        """获取系统数据（返回完整寄存器信息）"""
         sys_group = self.grouped_data.get("system", {})
         result = {}
         for addr, data in sys_group.items():
@@ -173,36 +176,37 @@ class ModbusClient:
             }
             key = name_map.get(data["name"])
             if key:
-                result[key] = data["value"]
+                result[key] = data
         return result
     
     def get_rooms(self) -> dict:
-        """获取房间数据（兼容旧接口）"""
+        """获取房间数据（返回完整寄存器信息）"""
         result = {}
         for room_id, room_info in reg.ROOMS.items():
             group_data = self.grouped_data.get(room_id, {})
             result[room_id] = {
-                "temp": group_data.get(room_info["temp"], {}).get("value", 0),
-                "humidity": group_data.get(room_info["humidity"], {}).get("value", 0),
-                "setpoint": group_data.get(room_info["setpoint"], {}).get("value", 0),
+                "temp": group_data.get(room_info["temp"], {}),
+                "humidity": group_data.get(room_info["humidity"], {}),
+                "dew_point": group_data.get(room_info["dew_point"], {}),
+                "setpoint": group_data.get(room_info["setpoint"], {}),
             }
         return result
     
     def set_power(self, on: bool) -> bool:
-        # 41033 是系统总电源地址
-        return self.write_register(41033, 1 if on else 0)
+        """设置系统总电源"""
+        return self.write_register(reg.RegisterAddress.SYSTEM_POWER, 1 if on else 0)
     
     def set_home_mode(self, home: bool) -> bool:
-        # 41034 是在家/离家模式地址
-        return self.write_register(41034, 1 if home else 0)
+        """设置在家/离家模式"""
+        return self.write_register(reg.RegisterAddress.HOME_MODE, 1 if home else 0)
     
     def set_run_mode(self, mode: int) -> bool:
-        # 41041 是运行模式地址
-        return self.write_register(41041, mode)
+        """设置运行模式"""
+        return self.write_register(reg.RegisterAddress.RUN_MODE, mode)
     
     def set_fan_speed(self, speed: int) -> bool:
-        # 41047 是新风风速设定地址
-        return self.write_register(41047, speed)
+        """设置新风风速"""
+        return self.write_register(reg.RegisterAddress.FAN_SPEED, speed)
     
     def set_room_setpoint(self, room_id: str, temp: float) -> bool:
         if room_id not in reg.ROOMS:

@@ -138,6 +138,7 @@ async def get_rooms(request: Request):
             "name": room_info["name"],
             "temp": data.get("temp"),
             "humidity": data.get("humidity"),
+            "dew_point": data.get("dew_point"),
             "setpoint": data.get("setpoint"),
         })
     

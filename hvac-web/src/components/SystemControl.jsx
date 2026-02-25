@@ -35,7 +35,7 @@ export function SystemControl() {
     return <div className="card">加载中...</div>;
   }
   
-  const modeNames = { 1: '制热', 2: '制冷', 3: '除湿', 4: '通风' };
+  const modeNames = { 1: '制冷', 2: '制热', 3: '通风', 4: '除湿' };
   
   return (
     <div className="card">

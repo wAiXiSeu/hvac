@@ -17,23 +17,35 @@ export function YorkHost({ data }) {
       <div className="york-host__content">
         <DataDisplay 
           label="供水温度" 
-          value={data.supplyTemp?.toFixed(1)} 
-          unit="°C" 
+          value={data.supplyTemp?.value?.toFixed(1)} 
+          unit="°C"
+          address={data.supplyTemp?.address}
+          rawValue={data.supplyTemp?.raw}
+          showDetails={true}
         />
         <DataDisplay 
           label="回水温度" 
-          value={data.returnTemp?.toFixed(1)} 
-          unit="°C" 
+          value={data.returnTemp?.value?.toFixed(1)} 
+          unit="°C"
+          address={data.returnTemp?.address}
+          rawValue={data.returnTemp?.raw}
+          showDetails={true}
         />
         <DataDisplay 
           label="制热设定点" 
-          value={data.heatingSetpoint?.toFixed(1)} 
-          unit="°C" 
+          value={data.heatingSetpoint?.value?.toFixed(1)} 
+          unit="°C"
+          address={data.heatingSetpoint?.address}
+          rawValue={data.heatingSetpoint?.raw}
+          showDetails={true}
         />
         <DataDisplay 
           label="制冷设定点" 
-          value={data.coolingSetpoint?.toFixed(1)} 
-          unit="°C" 
+          value={data.coolingSetpoint?.value?.toFixed(1)} 
+          unit="°C"
+          address={data.coolingSetpoint?.address}
+          rawValue={data.coolingSetpoint?.raw}
+          showDetails={true}
         />
       </div>
     </div>

@@ -7,10 +7,10 @@ import { useHvacData } from '../../contexts/HvacDataContext';
 import './SystemControl.css';
 
 const RUN_MODES = [
-  { value: 1, label: '制热' },
-  { value: 2, label: '制冷' },
-  { value: 3, label: '除湿' },
-  { value: 4, label: '通风' }
+  { value: 1, label: '制冷' },
+  { value: 2, label: '制热' },
+  { value: 3, label: '通风' },
+  { value: 4, label: '除湿' }
 ];
 
 export function SystemControl({ data }) {
@@ -50,16 +50,6 @@ export function SystemControl({ data }) {
     }
   };
 
-  const handleFanSpeedChange = async (newValue) => {
-    try {
-      await updateSystem({ fan_speed: Math.round(newValue) });
-      showFeedback('success', '新风风速已更新');
-    } catch (error) {
-      showFeedback('error', '风速调节失败');
-      throw error;
-    }
-  };
-
   const handleFreshAirSpeedChange = async (newValue) => {
     try {
       await updateFreshAirSpeed(Math.round(newValue));
@@ -95,20 +85,33 @@ export function SystemControl({ data }) {
       <div className="system-control__content">
         <ToggleSwitch 
           label="系统电源" 
-          checked={data.power === 1}
+          checked={data.power?.value === 1}
           onChange={handlePowerChange}
+          address={data.power?.address}
+          rawValue={data.power?.raw}
+          showDetails={true}
         />
         <ToggleSwitch 
           label="在家/离家模式" 
-          checked={data.home_mode === 1}
+          checked={data.home_mode?.value === 1}
           onChange={handleHomeModeChange}
+          address={data.home_mode?.address}
+          rawValue={data.home_mode?.raw}
+          showDetails={true}
         />
         
         <div className="system-control__field">
-          <label className="system-control__label">运行模式</label>
+          <div className="system-control__field-header">
+            <label className="system-control__label">运行模式</label>
+            {data.run_mode && (
+              <span className="system-control__details">
+                [{data.run_mode.address}] = {data.run_mode.raw}
+              </span>
+            )}
+          </div>
           <select 
             className="system-control__select"
-            value={data.run_mode || 1}
+            value={data.run_mode?.value || 1}
             onChange={handleRunModeChange}
           >
             {RUN_MODES.map(mode => (
@@ -121,12 +124,15 @@ export function SystemControl({ data }) {
 
         <Slider 
           label="新风风速" 
-          value={freshAir?.fanSpeed || data.fan_speed || 0} 
+          value={freshAir?.fanSpeed?.value || data.fan_speed?.value || 0} 
           min={0}
           max={100}
           step={5}
           unit="%"
           onChange={handleFreshAirSpeedChange}
+          address={data.fan_speed?.address || 1047}
+          rawValue={freshAir?.fanSpeed?.raw || data.fan_speed?.raw}
+          showDetails={true}
         />
 
         {freshAir && (
@@ -134,6 +140,9 @@ export function SystemControl({ data }) {
             label="加湿功能"
             checked={freshAir.humidifier === 1}
             onChange={handleHumidifierChange}
+            address={1168}
+            rawValue={freshAir.humidifier}
+            showDetails={true}
           />
         )}
       </div>

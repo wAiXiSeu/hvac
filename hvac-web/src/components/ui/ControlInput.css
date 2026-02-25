@@ -1,14 +1,28 @@
 .control-input {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: var(--spacing-xs);
   padding: var(--spacing-sm) 0;
-  gap: var(--spacing-md);
+}
+
+.control-input__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
 }
 
 .control-input__label {
   font-size: 14px;
   color: var(--color-text-secondary);
+}
+
+.control-input__details {
+  font-size: 11px;
+  color: #999;
+  font-family: 'Monaco', 'Consolas', monospace;
+  opacity: 0.7;
+  white-space: nowrap;
 }
 
 .control-input__value {

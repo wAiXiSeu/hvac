@@ -3,6 +3,20 @@ Modbus 寄存器地址定义
 基于 docs/modbus.jpg 中的寄存器映射表
 """
 
+# 常用寄存器地址常量
+class RegisterAddress:
+    # 系统控制
+    SYSTEM_POWER = 1033          # 系统总电源
+    HOME_MODE = 1034             # 在家/离家模式
+    RUN_MODE = 1041              # 运行模式
+    FAN_SPEED = 1047             # 新风风速设定
+    
+    # 厨卫功能
+    KITCHEN_RADIANT = 1133       # 厨卫辐射开关
+    
+    # 新风系统
+    HUMIDIFIER = 1168            # 面板加湿开关
+
 # 寄存器完整定义：地址 -> {名称, 单位, 读写, 缩放因子, 描述, 分组}
 REGISTERS = {
     # ========== 系统环境区 ==========
@@ -14,7 +28,7 @@ REGISTERS = {
     # ========== 系统控制区 ==========
     1033: {"name": "系统总电源", "unit": "", "rw": "RW", "scaling": 1, "desc": "1:开 0:关", "group": "system"},
     1034: {"name": "在家/离家模式", "unit": "", "rw": "RW", "scaling": 1, "desc": "1:在家 0:离家", "group": "system"},
-    101: {"name": "运行模式", "unit": "", "rw": "RW", "scaling": 1, "desc": "1:制热 2:制冷 3:除湿 4:通风", "group": "system"},
+    1041: {"name": "运行模式", "unit": "", "rw": "RW", "scaling": 1, "desc": "1:制冷 2:制热 3:通风 4:除湿", "group": "system"},
     1047: {"name": "新风风速设定", "unit": "%", "rw": "RW", "scaling": 1, "desc": "风速百分比", "group": "system"},
     
     # ========== 约克主机区 ==========
@@ -58,10 +72,10 @@ REGISTERS = {
 
 # 房间配置
 ROOMS = {
-    "living_room": {"name": "客厅", "temp": 1085, "humidity": 1087, "setpoint": 1090},
-    "master_bedroom": {"name": "主卧", "temp": 1095, "humidity": 1097, "setpoint": 1101},
-    "second_bedroom": {"name": "次卧", "temp": 1105, "humidity": 1107, "setpoint": 1110},
-    "study_room": {"name": "书房", "temp": 1117, "humidity": 1119, "setpoint": 1123},
+    "living_room": {"name": "客厅", "temp": 1085, "humidity": 1087, "dew_point": 1088, "setpoint": 1090},
+    "master_bedroom": {"name": "主卧", "temp": 1095, "humidity": 1097, "dew_point": 1098, "setpoint": 1101},
+    "second_bedroom": {"name": "次卧", "temp": 1105, "humidity": 1107, "dew_point": 1108, "setpoint": 1110},
+    "study_room": {"name": "书房", "temp": 1117, "humidity": 1119, "dew_point": 1120, "setpoint": 1123},
 }
 
 # 分组名称

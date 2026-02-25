@@ -16,14 +16,29 @@
 
 .system-control__field {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: var(--spacing-xs);
   padding: var(--spacing-sm) 0;
+}
+
+.system-control__field-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
 }
 
 .system-control__label {
   font-size: 14px;
   color: var(--color-text-secondary);
+}
+
+.system-control__details {
+  font-size: 11px;
+  color: #999;
+  font-family: 'Monaco', 'Consolas', monospace;
+  opacity: 0.7;
+  white-space: nowrap;
 }
 
 .system-control__select {

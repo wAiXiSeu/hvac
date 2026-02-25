@@ -28,25 +28,41 @@ export function RoomControlPanel({ room }) {
       <div className="room-control-panel__data">
         <DataDisplay 
           label="当前温度" 
-          value={room.temp?.toFixed(1)} 
+          value={room.temp?.value?.toFixed(1)} 
           unit="°C"
+          address={room.temp?.address}
+          rawValue={room.temp?.raw}
+          showDetails={true}
         />
         <DataDisplay 
           label="当前湿度" 
-          value={room.humidity?.toFixed(1)} 
+          value={room.humidity?.value?.toFixed(1)} 
           unit="%"
+          address={room.humidity?.address}
+          rawValue={room.humidity?.raw}
+          showDetails={true}
+        />
+        <DataDisplay 
+          label="露点温度" 
+          value={room.dew_point?.value?.toFixed(1)} 
+          unit="°C"
+          address={room.dew_point?.address}
+          rawValue={room.dew_point?.raw}
+          showDetails={true}
         />
       </div>
 
       <div className="room-control-panel__control">
         <ControlInput 
           label="设定温度"
-          value={room.setpoint || 20}
+          value={room.setpoint?.value || 20}
           unit="°C"
           min={16}
           max={30}
           step={0.5}
           onSave={handleSetpointChange}
+          address={room.setpoint?.address}
+          rawValue={room.setpoint?.raw}
         />
       </div>
 
