@@ -93,7 +93,15 @@ hvac/
 
 ## Home Assistant 集成
 
-通过 HACS 安装自定义集成，可在 Home Assistant 中控制 HVAC 系统。
+通过 HACS 安装自定义集成，可在 Home Assistant 中直接通过 Modbus TCP 控制 HVAC 系统（无需独立后端服务）。
+
+### 架构说明
+
+集成直接通过 Modbus TCP 协议与 HVAC 设备通信，无需运行独立的后端服务。
+
+```
+Home Assistant --> Modbus TCP --> HVAC 设备 (192.168.110.200:502)
+```
 
 ### 安装方式
 
@@ -117,9 +125,11 @@ hvac/
 
 1. 进入 **设置** > **设备与服务** > **添加集成**
 2. 搜索 "HVAC Modbus"
-3. 输入后端服务地址：
-   - 主机：后端服务 IP（如 `localhost` 或 `192.168.1.100`）
-   - 端口：后端服务端口（默认 `8000`）
+3. 输入 Modbus 设备连接参数：
+   - 主机：Modbus 设备 IP（默认 `192.168.110.200`）
+   - 端口：Modbus 端口（默认 `502`）
+   - 从机 ID：Modbus 从机 ID（默认 `1`）
+   - 扫描间隔：数据刷新间隔（默认 `30` 秒）
 4. 点击提交完成配置
 
 ### 提供的实体
@@ -200,10 +210,13 @@ cp -r custom_components/hvac_modbus /path/to/homeassistant/custom_components/
 2. 进入 **设置** > **设备与服务**
 3. 点击右下角 **添加集成** 按钮
 4. 搜索 "HVAC Modbus"
-5. 输入后端地址：
-   - 主机：`host.docker.internal`（Docker Desktop Mac/Windows）或 `172.17.0.1`（Linux）
-   - 端口：`8000`
+5. 输入 Modbus 设备地址：
+   - 主机：`192.168.110.200`（Modbus 设备 IP）
+   - 端口：`502`（Modbus TCP 端口）
+   - 从机 ID：`1`
 6. 点击提交完成配置
+
+**注意**：使用 `--network host` 模式确保 Docker 容器可以直接访问局域网内的 Modbus 设备。
 
 #### 验证实体
 
@@ -260,19 +273,19 @@ automation:
 ### 故障排查
 
 **问题：实体显示 unavailable**
-- 检查后端服务是否运行
-- 检查 Home Assistant 能否访问后端地址
+- 检查 Modbus 设备是否在线
+- 检查 Home Assistant 能否访问 Modbus 设备 IP
 - 查看 Home Assistant 日志中的错误信息
 
 **问题：控制命令无响应**
-- 确认后端 Modbus 连接正常
-- 检查后端日志是否有错误
-- 尝试重启后端服务
+- 确认 Modbus 设备连接正常
+- 检查寄存器地址是否正确
+- 查看 Home Assistant 日志中的 Modbus 错误
 
-**问题：Docker 网络无法连接 localhost**
-- 使用宿主机 IP 替代 localhost
-- Docker Desktop (Mac/Windows)：`host.docker.internal`
-- Docker Linux：`172.17.0.1` 或添加 `--network host`
+**问题：Docker 网络无法连接 Modbus 设备**
+- 使用 `--network host` 模式运行容器
+- 确保容器和 Modbus 设备在同一局域网
+- 检查防火墙设置
 
 **问题：集成找不到**
 - 确认 custom_components 目录正确
@@ -280,6 +293,7 @@ automation:
 - 重启 Home Assistant
 
 **问题：配置时连接失败**
-- 确认 HVAC 后端已启动并监听正确端口
+- 确认 Modbus 设备 IP 和端口正确
 - 检查防火墙是否阻止连接
-- 使用 `curl http://localhost:8000/health` 测试后端是否正常
+- 确保从机 ID 设置正确
+- 使用 Modbus 测试工具验证连接

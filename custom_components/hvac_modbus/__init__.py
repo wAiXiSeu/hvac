@@ -1,7 +1,6 @@
 """The HVAC Modbus integration."""
 
 import logging
-from datetime import timedelta
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
@@ -9,8 +8,8 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import ConfigType
 
-from .api import HVACApiClient
-from .const import CONF_HOST, CONF_PORT, CONF_API_KEY, CONF_SCAN_INTERVAL, DOMAIN
+from .modbus import HVACModbusClient
+from .const import CONF_HOST, CONF_PORT, CONF_SLAVE_ID, CONF_SCAN_INTERVAL, DOMAIN, DEFAULT_PORT, DEFAULT_SLAVE_ID
 from .coordinator import HVACDataCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -30,19 +29,56 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
+async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+    """Migrate old entry to new version."""
+    _LOGGER.info("Migrating from version %s to version 2", config_entry.version)
+
+    if config_entry.version == 1:
+        # v1 used HTTP API, v2 uses direct Modbus
+        # Keep host, change port to Modbus default (502), add slave_id
+        new_data = {
+            CONF_HOST: config_entry.data.get(CONF_HOST, "192.168.110.200"),
+            CONF_PORT: DEFAULT_PORT,  # Modbus port 502
+            CONF_SLAVE_ID: DEFAULT_SLAVE_ID,
+            CONF_SCAN_INTERVAL: config_entry.data.get(CONF_SCAN_INTERVAL, 30),
+        }
+        
+        hass.config_entries.async_update_entry(
+            config_entry,
+            data=new_data,
+            version=2,
+        )
+        
+        _LOGGER.info(
+            "Migration successful: updated to Modbus direct connection at %s:%s",
+            new_data[CONF_HOST],
+            new_data[CONF_PORT],
+        )
+
+    return True
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up HVAC Modbus from a config entry."""
     host = entry.data[CONF_HOST]
     port = entry.data[CONF_PORT]
-    api_key = entry.data.get(CONF_API_KEY)
+    slave_id = entry.data.get(CONF_SLAVE_ID, 1)
     scan_interval = entry.options.get(
         CONF_SCAN_INTERVAL, entry.data.get(CONF_SCAN_INTERVAL, 30)
     )
     
-    api = HVACApiClient(host=host, port=port, api_key=api_key)
+    # Create Modbus client
+    modbus = HVACModbusClient(host=host, port=port, slave_id=slave_id)
+    
+    # Connect to Modbus device
+    connected = await modbus.connect()
+    if not connected:
+        _LOGGER.error("Failed to connect to Modbus device at %s:%s", host, port)
+        # Still proceed - coordinator will handle reconnection
+    
     coordinator = HVACDataCoordinator(
         hass=hass,
-        api=api,
+        modbus=modbus,
         scan_interval=scan_interval,
     )
     
@@ -50,7 +86,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await coordinator.async_config_entry_first_refresh()
     
     hass.data[DOMAIN][entry.entry_id] = {
-        "api": api,
+        "modbus": modbus,
         "coordinator": coordinator,
     }
     
@@ -67,7 +103,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         data = hass.data[DOMAIN].pop(entry.entry_id)
-        await data["api"].close()
+        await data["modbus"].disconnect()
     
     return unload_ok
 

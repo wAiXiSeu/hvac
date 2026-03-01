@@ -8,16 +8,16 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
-from homeassistant.helpers import config_validation as cv
 
-from .api import HVACApiClient, HVACApiError
+from .modbus import HVACModbusClient, HVACModbusError
 from .const import (
-    CONF_API_KEY,
     CONF_HOST,
     CONF_PORT,
+    CONF_SLAVE_ID,
     CONF_SCAN_INTERVAL,
     DEFAULT_HOST,
     DEFAULT_PORT,
+    DEFAULT_SLAVE_ID,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
 )
@@ -28,7 +28,7 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_HOST, default=DEFAULT_HOST): str,
         vol.Required(CONF_PORT, default=DEFAULT_PORT): int,
-        vol.Optional(CONF_API_KEY): str,
+        vol.Required(CONF_SLAVE_ID, default=DEFAULT_SLAVE_ID): int,
         vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): int,
     }
 )
@@ -36,30 +36,30 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
 
 async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
     """Validate the user input allows us to connect."""
-    api = HVACApiClient(
+    client = HVACModbusClient(
         host=data[CONF_HOST],
         port=data[CONF_PORT],
-        api_key=data.get(CONF_API_KEY),
+        slave_id=data[CONF_SLAVE_ID],
     )
     
     try:
-        connected = await api.test_connection()
-    except HVACApiError as err:
-        await api.close()
+        connected = await client.test_connection()
+    except Exception as err:
+        await client.disconnect()
         raise ValueError(f"cannot_connect: {err}") from err
     finally:
-        await api.close()
+        await client.disconnect()
     
     if not connected:
         raise ValueError("cannot_connect")
     
-    return {"title": f"HVAC ({data[CONF_HOST]}:{data[CONF_PORT]})"}
+    return {"title": f"HVAC Modbus ({data[CONF_HOST]}:{data[CONF_PORT]})"}
 
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for HVAC Modbus."""
 
-    VERSION = 1
+    VERSION = 2
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -71,8 +71,12 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             try:
                 info = await validate_input(self.hass, user_input)
             except ValueError as err:
-                errors["base"] = str(err).split(":")[0]
-            except Exception:  # pylint: disable=broad-except
+                error_msg = str(err)
+                if "cannot_connect" in error_msg:
+                    errors["base"] = "cannot_connect"
+                else:
+                    errors["base"] = "unknown"
+            except Exception:
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
             else:
@@ -98,7 +102,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""
-        self.config_entry = config_entry
+        self._config_entry = config_entry
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
@@ -107,7 +111,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
         
-        options = self.config_entry.options
+        options = self._config_entry.options
         
         return self.async_show_form(
             step_id="init",

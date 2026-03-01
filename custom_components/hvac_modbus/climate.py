@@ -24,10 +24,11 @@ async def async_setup_entry(
     """Set up HVAC climate platform."""
     data = hass.data[DOMAIN][entry.entry_id]
     coordinator = data["coordinator"]
+    modbus = data["modbus"]
     
     entities = []
     for room_id in ROOM_IDS:
-        entities.append(HVACRoomClimate(coordinator, room_id))
+        entities.append(HVACRoomClimate(coordinator, modbus, room_id))
     
     async_add_entities(entities)
 
@@ -46,9 +47,10 @@ class HVACRoomClimate(ClimateEntity):
         ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.PRESET_MODE
     )
 
-    def __init__(self, coordinator: HVACDataCoordinator, room_id: str) -> None:
+    def __init__(self, coordinator: HVACDataCoordinator, modbus, room_id: str) -> None:
         """Initialize the climate entity."""
         self.coordinator = coordinator
+        self._modbus = modbus
         self._room_id = room_id
         self._attr_unique_id = f"hvac_{room_id}_climate"
         self._attr_translation_key = f"hvac_{room_id}"
@@ -63,25 +65,26 @@ class HVACRoomClimate(ClimateEntity):
     def current_temperature(self) -> float | None:
         """Return current temperature."""
         if self.room_data:
-            temp_data = self.room_data.get("temp", {})
-            return temp_data.get("value")
+            return self.room_data.get("temp")
         return None
 
     @property
     def target_temperature(self) -> float | None:
         """Return target temperature."""
         if self.room_data:
-            setpoint_data = self.room_data.get("setpoint", {})
-            return setpoint_data.get("value")
+            return self.room_data.get("setpoint")
         return None
 
     @property
     def hvac_mode(self) -> HVACMode:
         """Return hvac mode."""
-        # Get from system run mode
         system_data = self.coordinator.get_system_data()
-        run_mode_data = system_data.get("run_mode", {})
-        run_mode = run_mode_data.get("value")
+        power = system_data.get("power", False)
+        
+        if not power:
+            return HVACMode.OFF
+        
+        run_mode = system_data.get("run_mode", 1)
         
         if run_mode == 1:  # 制冷
             return HVACMode.COOL
@@ -94,9 +97,8 @@ class HVACRoomClimate(ClimateEntity):
     def preset_mode(self) -> str:
         """Return preset mode."""
         system_data = self.coordinator.get_system_data()
-        home_mode_data = system_data.get("home_mode", {})
-        home_mode = home_mode_data.get("value", 1)
-        return PRESET_HOME if home_mode == 1 else PRESET_AWAY
+        home_mode = system_data.get("home_mode", True)
+        return PRESET_HOME if home_mode else PRESET_AWAY
 
     async def async_set_temperature(self, **kwargs: Any) -> None:
         """Set new target temperature."""
@@ -104,30 +106,30 @@ class HVACRoomClimate(ClimateEntity):
         if temperature is None:
             return
         
-        api = self.coordinator.api
-        await api.set_room_setpoint(self._room_id, temperature)
+        await self._modbus.set_room_setpoint(self._room_id, temperature)
         await self.coordinator.async_request_refresh()
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Set hvac mode."""
-        # Map HVAC mode to run mode
-        run_mode_map = {
-            HVACMode.COOL: 1,
-            HVACMode.HEAT: 2,
-            HVACMode.OFF: 0,
-        }
-        run_mode = run_mode_map.get(hvac_mode, 0)
+        if hvac_mode == HVACMode.OFF:
+            await self._modbus.set_system_power(False)
+        else:
+            # Turn on power first
+            await self._modbus.set_system_power(True)
+            # Map HVAC mode to run mode
+            run_mode_map = {
+                HVACMode.COOL: 1,
+                HVACMode.HEAT: 2,
+            }
+            run_mode = run_mode_map.get(hvac_mode, 1)
+            await self._modbus.set_run_mode(run_mode)
         
-        if run_mode > 0:
-            api = self.coordinator.api
-            await api.set_system(run_mode=run_mode)
-            await self.coordinator.async_request_refresh()
+        await self.coordinator.async_request_refresh()
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Set preset mode."""
         home_mode = preset_mode == PRESET_HOME
-        api = self.coordinator.api
-        await api.set_system(home_mode=home_mode)
+        await self._modbus.set_home_mode(home_mode)
         await self.coordinator.async_request_refresh()
 
     @property
@@ -147,24 +149,16 @@ class HVACRoomClimate(ClimateEntity):
         attrs = {}
         if self.room_data:
             # Add humidity
-            humidity_data = self.room_data.get("humidity", {})
-            if humidity_data.get("value") is not None:
-                attrs["humidity"] = humidity_data.get("value")
+            humidity = self.room_data.get("humidity")
+            if humidity is not None:
+                attrs["humidity"] = humidity
             
             # Add dew point
-            dew_point_data = self.room_data.get("dew_point", {})
-            if dew_point_data.get("value") is not None:
-                attrs["dew_point"] = dew_point_data.get("value")
+            dew_point = self.room_data.get("dew_point")
+            if dew_point is not None:
+                attrs["dew_point"] = dew_point
             
-            # Add register info
-            temp_data = self.room_data.get("temp", {})
-            if temp_data:
-                attrs["temp_register"] = temp_data.get("address")
-                attrs["temp_raw"] = temp_data.get("raw")
-            
-            setpoint_data = self.room_data.get("setpoint", {})
-            if setpoint_data:
-                attrs["setpoint_register"] = setpoint_data.get("address")
-                attrs["setpoint_raw"] = setpoint_data.get("raw")
+            # Add room ID
+            attrs["room_id"] = self._room_id
         
         return attrs

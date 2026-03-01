@@ -22,9 +22,10 @@ async def async_setup_entry(
     """Set up HVAC select platform."""
     data = hass.data[DOMAIN][entry.entry_id]
     coordinator = data["coordinator"]
+    modbus = data["modbus"]
     
     entities = [
-        HVACRunModeSelect(coordinator),
+        HVACRunModeSelect(coordinator, modbus),
     ]
     
     async_add_entities(entities)
@@ -39,16 +40,16 @@ class HVACRunModeSelect(SelectEntity):
     _attr_icon = "mdi:air-conditioner"
     _attr_options = list(RUN_MODE_REVERSE.keys())
 
-    def __init__(self, coordinator: HVACDataCoordinator) -> None:
+    def __init__(self, coordinator: HVACDataCoordinator, modbus) -> None:
         """Initialize the select."""
         self.coordinator = coordinator
+        self._modbus = modbus
 
     @property
     def current_option(self) -> str | None:
         """Return the current option."""
         system_data = self.coordinator.get_system_data()
-        run_mode_data = system_data.get("run_mode", {})
-        run_mode = run_mode_data.get("value")
+        run_mode = system_data.get("run_mode")
         
         if run_mode and run_mode in RUN_MODES:
             return RUN_MODES[run_mode]
@@ -58,7 +59,7 @@ class HVACRunModeSelect(SelectEntity):
         """Set the option."""
         if option in RUN_MODE_REVERSE:
             run_mode = RUN_MODE_REVERSE[option]
-            await self.coordinator.api.set_system(run_mode=run_mode)
+            await self._modbus.set_run_mode(run_mode)
             await self.coordinator.async_request_refresh()
 
     @property
@@ -71,15 +72,3 @@ class HVACRunModeSelect(SelectEntity):
         self.async_on_remove(
             self.coordinator.async_add_listener(self.async_write_ha_state)
         )
-
-    @property
-    def extra_state_attributes(self) -> dict[str, Any]:
-        """Return additional state attributes."""
-        attrs = {}
-        system_data = self.coordinator.get_system_data()
-        run_mode_data = system_data.get("run_mode", {})
-        if run_mode_data:
-            attrs["register_address"] = run_mode_data.get("address")
-            attrs["raw_value"] = run_mode_data.get("raw")
-            attrs["description"] = run_mode_data.get("desc")
-        return attrs

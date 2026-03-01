@@ -5,21 +5,14 @@ DOMAIN = "hvac_modbus"
 # Configuration keys
 CONF_HOST = "host"
 CONF_PORT = "port"
-CONF_API_KEY = "api_key"
+CONF_SLAVE_ID = "slave_id"
 CONF_SCAN_INTERVAL = "scan_interval"
 
 # Default values
-DEFAULT_HOST = "localhost"
-DEFAULT_PORT = 8000
+DEFAULT_HOST = "192.168.110.200"
+DEFAULT_PORT = 502
+DEFAULT_SLAVE_ID = 1
 DEFAULT_SCAN_INTERVAL = 30
-
-# API endpoints
-API_ENDPOINTS = {
-    "rooms": "/api/rooms",
-    "system": "/api/system",
-    "status": "/api/status",
-    "registers": "/api/registers/grouped",
-}
 
 # Room IDs
 ROOM_IDS = ["living_room", "master_bedroom", "second_bedroom", "study_room"]

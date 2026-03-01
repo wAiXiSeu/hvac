@@ -8,7 +8,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN, REGISTER_ADDRESSES
+from .const import DOMAIN
 from .coordinator import HVACDataCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -22,63 +22,46 @@ async def async_setup_entry(
     """Set up HVAC switch platform."""
     data = hass.data[DOMAIN][entry.entry_id]
     coordinator = data["coordinator"]
+    modbus = data["modbus"]
     
     entities = [
-        HVACSystemSwitch(coordinator, "系统电源", "system_power", "system"),
-        HVACSystemSwitch(coordinator, "在家模式", "home_mode", "system"),
-        HVACRegisterSwitch(coordinator, "厨卫辐射", "kitchen_radiant", REGISTER_ADDRESSES["kitchen_radiant"]),
-        HVACRegisterSwitch(coordinator, "加湿功能", "humidifier", REGISTER_ADDRESSES["humidifier"]),
+        HVACPowerSwitch(coordinator, modbus),
+        HVACHomeModeSwitch(coordinator, modbus),
+        HVACKitchenRadiantSwitch(coordinator, modbus),
+        HVACHumidifierSwitch(coordinator, modbus),
     ]
     
     async_add_entities(entities)
 
 
-class HVACSystemSwitch(SwitchEntity):
-    """Switch entity for HVAC system control."""
+class HVACPowerSwitch(SwitchEntity):
+    """Switch entity for HVAC system power."""
 
     _attr_has_entity_name = True
+    _attr_unique_id = "hvac_system_power"
+    _attr_name = "系统电源"
+    _attr_icon = "mdi:power"
 
-    def __init__(
-        self,
-        coordinator: HVACDataCoordinator,
-        name: str,
-        key: str,
-        group: str,
-    ) -> None:
+    def __init__(self, coordinator: HVACDataCoordinator, modbus) -> None:
         """Initialize the switch."""
         self.coordinator = coordinator
-        self._key = key
-        self._group = group
-        self._attr_unique_id = f"hvac_{key}"
-        self._attr_name = name
-        self._attr_icon = "mdi:power" if "power" in key else "mdi:home"
+        self._modbus = modbus
 
     @property
     def is_on(self) -> bool:
         """Return True if entity is on."""
-        if self._group == "system":
-            system_data = self.coordinator.get_system_data()
-            key_data = system_data.get(self._key, {})
-            return key_data.get("value", 0) == 1
-        return False
+        system_data = self.coordinator.get_system_data()
+        return system_data.get("power", False)
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the entity on."""
-        if self._group == "system":
-            if self._key == "system_power":
-                await self.coordinator.api.set_system(power=True)
-            elif self._key == "home_mode":
-                await self.coordinator.api.set_system(home_mode=True)
-            await self.coordinator.async_request_refresh()
+        await self._modbus.set_system_power(True)
+        await self.coordinator.async_request_refresh()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the entity off."""
-        if self._group == "system":
-            if self._key == "system_power":
-                await self.coordinator.api.set_system(power=False)
-            elif self._key == "home_mode":
-                await self.coordinator.api.set_system(home_mode=False)
-            await self.coordinator.async_request_refresh()
+        await self._modbus.set_system_power(False)
+        await self.coordinator.async_request_refresh()
 
     @property
     def available(self) -> bool:
@@ -91,64 +74,40 @@ class HVACSystemSwitch(SwitchEntity):
             self.coordinator.async_add_listener(self.async_write_ha_state)
         )
 
-    @property
-    def extra_state_attributes(self) -> dict[str, Any]:
-        """Return additional state attributes."""
-        attrs = {}
-        if self._group == "system":
-            system_data = self.coordinator.get_system_data()
-            key_data = system_data.get(self._key, {})
-            if key_data:
-                attrs["register_address"] = key_data.get("address")
-                attrs["raw_value"] = key_data.get("raw")
-        return attrs
 
-
-class HVACRegisterSwitch(SwitchEntity):
-    """Switch entity for register-based controls."""
+class HVACHomeModeSwitch(SwitchEntity):
+    """Switch entity for home mode."""
 
     _attr_has_entity_name = True
+    _attr_unique_id = "hvac_home_mode"
+    _attr_name = "在家模式"
+    _attr_icon = "mdi:home"
 
-    def __init__(
-        self,
-        coordinator: HVACDataCoordinator,
-        name: str,
-        unique_id_suffix: str,
-        register_address: int,
-    ) -> None:
+    def __init__(self, coordinator: HVACDataCoordinator, modbus) -> None:
         """Initialize the switch."""
         self.coordinator = coordinator
-        self._register_address = register_address
-        self._attr_unique_id = f"hvac_{unique_id_suffix}"
-        self._attr_name = name
-        self._attr_icon = "mdi:water" if "humidifier" in unique_id_suffix else "mdi:radiator"
-
-    @property
-    def register_data(self) -> dict[str, Any] | None:
-        """Get register data."""
-        return self.coordinator.get_register_data(self._register_address)
+        self._modbus = modbus
 
     @property
     def is_on(self) -> bool:
         """Return True if entity is on."""
-        if self.register_data:
-            return self.register_data.get("value", 0) == 1
-        return False
+        system_data = self.coordinator.get_system_data()
+        return system_data.get("home_mode", False)
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the entity on."""
-        await self.coordinator.api.write_register(self._register_address, 1)
+        await self._modbus.set_home_mode(True)
         await self.coordinator.async_request_refresh()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the entity off."""
-        await self.coordinator.api.write_register(self._register_address, 0)
+        await self._modbus.set_home_mode(False)
         await self.coordinator.async_request_refresh()
 
     @property
     def available(self) -> bool:
         """Return if entity is available."""
-        return self.coordinator.last_update_success and self.register_data is not None
+        return self.coordinator.last_update_success
 
     async def async_added_to_hass(self) -> None:
         """When entity is added to hass."""
@@ -156,12 +115,84 @@ class HVACRegisterSwitch(SwitchEntity):
             self.coordinator.async_add_listener(self.async_write_ha_state)
         )
 
+
+class HVACKitchenRadiantSwitch(SwitchEntity):
+    """Switch entity for kitchen radiant."""
+
+    _attr_has_entity_name = True
+    _attr_unique_id = "hvac_kitchen_radiant"
+    _attr_name = "厨卫辐射"
+    _attr_icon = "mdi:radiator"
+
+    def __init__(self, coordinator: HVACDataCoordinator, modbus) -> None:
+        """Initialize the switch."""
+        self.coordinator = coordinator
+        self._modbus = modbus
+
     @property
-    def extra_state_attributes(self) -> dict[str, Any]:
-        """Return additional state attributes."""
-        attrs = {}
-        if self.register_data:
-            attrs["register_address"] = self.register_data.get("address")
-            attrs["raw_value"] = self.register_data.get("raw")
-            attrs["description"] = self.register_data.get("desc")
-        return attrs
+    def is_on(self) -> bool:
+        """Return True if entity is on."""
+        kitchen_data = self.coordinator.get_kitchen_data()
+        return kitchen_data.get("radiant", False)
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        """Turn the entity on."""
+        await self._modbus.set_kitchen_radiant(True)
+        await self.coordinator.async_request_refresh()
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        """Turn the entity off."""
+        await self._modbus.set_kitchen_radiant(False)
+        await self.coordinator.async_request_refresh()
+
+    @property
+    def available(self) -> bool:
+        """Return if entity is available."""
+        return self.coordinator.last_update_success
+
+    async def async_added_to_hass(self) -> None:
+        """When entity is added to hass."""
+        self.async_on_remove(
+            self.coordinator.async_add_listener(self.async_write_ha_state)
+        )
+
+
+class HVACHumidifierSwitch(SwitchEntity):
+    """Switch entity for humidifier."""
+
+    _attr_has_entity_name = True
+    _attr_unique_id = "hvac_humidifier"
+    _attr_name = "加湿功能"
+    _attr_icon = "mdi:water"
+
+    def __init__(self, coordinator: HVACDataCoordinator, modbus) -> None:
+        """Initialize the switch."""
+        self.coordinator = coordinator
+        self._modbus = modbus
+
+    @property
+    def is_on(self) -> bool:
+        """Return True if entity is on."""
+        fresh_air_data = self.coordinator.get_fresh_air_data()
+        return fresh_air_data.get("humidifier", False)
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        """Turn the entity on."""
+        await self._modbus.set_humidifier(True)
+        await self.coordinator.async_request_refresh()
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        """Turn the entity off."""
+        await self._modbus.set_humidifier(False)
+        await self.coordinator.async_request_refresh()
+
+    @property
+    def available(self) -> bool:
+        """Return if entity is available."""
+        return self.coordinator.last_update_success
+
+    async def async_added_to_hass(self) -> None:
+        """When entity is added to hass."""
+        self.async_on_remove(
+            self.coordinator.async_add_listener(self.async_write_ha_state)
+        )
