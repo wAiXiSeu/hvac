@@ -194,21 +194,34 @@ class ModbusClient:
     
     def set_power(self, on: bool) -> bool:
         """设置系统总电源"""
-        return self.write_register(reg.RegisterAddress.SYSTEM_POWER, 1 if on else 0)
+        result = self.write_register(reg.RegisterAddress.SYSTEM_POWER, 1 if on else 0)
+        if result:
+            self._update_cache(reg.RegisterAddress.SYSTEM_POWER, 1 if on else 0)
+        return result
     
     def set_home_mode(self, home: bool) -> bool:
         """设置在家/离家模式"""
-        return self.write_register(reg.RegisterAddress.HOME_MODE, 1 if home else 0)
+        result = self.write_register(reg.RegisterAddress.HOME_MODE, 1 if home else 0)
+        if result:
+            self._update_cache(reg.RegisterAddress.HOME_MODE, 1 if home else 0)
+        return result
     
     def set_run_mode(self, mode: int) -> bool:
         """设置运行模式"""
-        return self.write_register(reg.RegisterAddress.RUN_MODE, mode)
+        result = self.write_register(reg.RegisterAddress.RUN_MODE, mode)
+        if result:
+            self._update_cache(reg.RegisterAddress.RUN_MODE, mode)
+        return result
     
     def set_fan_speed(self, speed: int) -> bool:
         """设置新风风速"""
-        return self.write_register(reg.RegisterAddress.FAN_SPEED, speed)
+        result = self.write_register(reg.RegisterAddress.FAN_SPEED, speed)
+        if result:
+            self._update_cache(reg.RegisterAddress.FAN_SPEED, speed)
+        return result
     
     def set_room_setpoint(self, room_id: str, temp: float) -> bool:
+        """设置房间温度设定值"""
         if room_id not in reg.ROOMS:
             logger.warning(f"Unknown room_id: {room_id}")
             return False
@@ -217,7 +230,48 @@ class ModbusClient:
         logger.info(f"Setting {room_id} temperature: {temp}°C -> register {setpoint_addr} = {value}")
         result = self.write_register(setpoint_addr, value)
         logger.info(f"Write result: {result}")
+        
+        # 写入成功后立即更新缓存
+        if result:
+            self._update_cache(setpoint_addr, value)
+        
         return result
+    
+    def _update_cache(self, address: int, raw_value: int):
+        """更新本地缓存中的寄存器值"""
+        if address not in reg.REGISTERS:
+            return
+        
+        info = reg.REGISTERS[address]
+        scaled_value = reg.scale_value(raw_value, address)
+        group = info["group"]
+        
+        # 更新全局缓存
+        self.all_registers_data[address] = {
+            "name": info["name"],
+            "address": address,
+            "raw": raw_value,
+            "value": scaled_value,
+            "unit": info["unit"],
+            "rw": info["rw"],
+            "desc": info["desc"],
+            "group": group,
+        }
+        
+        # 更新分组缓存
+        if group not in self.grouped_data:
+            self.grouped_data[group] = {}
+        self.grouped_data[group][address] = {
+            "name": info["name"],
+            "address": address,
+            "raw": raw_value,
+            "value": scaled_value,
+            "unit": info["unit"],
+            "rw": info["rw"],
+            "desc": info["desc"],
+        }
+        
+        logger.info(f"Cache updated: {info['name']} = {scaled_value} (raw: {raw_value})")
     
     def write_register_by_address(self, address: int, value: float) -> bool:
         """通过地址写入寄存器"""
@@ -226,4 +280,7 @@ class ModbusClient:
         if reg.REGISTERS[address]["rw"] != "RW":
             return False
         raw_value = reg.unscale_value(value, address)
-        return self.write_register(address, raw_value)
+        result = self.write_register(address, raw_value)
+        if result:
+            self._update_cache(address, raw_value)
+        return result
