@@ -78,6 +78,8 @@ hvac/
 │       ├── components/    # React 组件
 │       ├── hooks/         # 自定义 Hooks
 │       └── services/      # API 服务
+├── custom_components/     # Home Assistant 集成
+│   └── hvac_modbus/       # HACS 自定义集成
 └── start.sh               # 启动脚本
 ```
 
@@ -88,3 +90,196 @@ hvac/
 - 主卧 (master_bedroom)
 - 次卧 (second_bedroom)
 - 书房 (study_room)
+
+## Home Assistant 集成
+
+通过 HACS 安装自定义集成，可在 Home Assistant 中控制 HVAC 系统。
+
+### 安装方式
+
+#### 方式一：手动安装
+
+1. 将 `custom_components/hvac_modbus` 目录复制到 Home Assistant 的 `custom_components` 目录下：
+   ```bash
+   cp -r custom_components/hvac_modbus /path/to/homeassistant/custom_components/
+   ```
+
+2. 重启 Home Assistant
+
+#### 方式二：HACS 安装
+
+1. 在 HACS 中添加自定义仓库
+2. 选择 "Integration" 类型
+3. 输入仓库 URL 并安装
+4. 重启 Home Assistant
+
+### 配置集成
+
+1. 进入 **设置** > **设备与服务** > **添加集成**
+2. 搜索 "HVAC Modbus"
+3. 输入后端服务地址：
+   - 主机：后端服务 IP（如 `localhost` 或 `192.168.1.100`）
+   - 端口：后端服务端口（默认 `8000`）
+4. 点击提交完成配置
+
+### 提供的实体
+
+#### Climate 恒温器（4个）
+| 实体 ID | 名称 | 功能 |
+|---------|------|------|
+| climate.hvac_living_room | 客厅恒温器 | 温度显示与设定 |
+| climate.hvac_master_bedroom | 主卧恒温器 | 温度显示与设定 |
+| climate.hvac_second_bedroom | 次卧恒温器 | 温度显示与设定 |
+| climate.hvac_study_room | 书房恒温器 | 温度显示与设定 |
+
+#### Sensor 传感器（18个）
+- **环境监测**：PM2.5、CO2、室外温度、室外湿度
+- **房间传感器**：每个房间的温度、湿度、露点温度
+- **约克主机**：供水温度、回水温度
+- **新风系统**：压缩机频率、供水温、回水温
+- **连接状态**：HVAC 连接状态
+
+#### Switch 开关（4个）
+- 系统电源
+- 在家模式
+- 厨卫辐射
+- 加湿功能
+
+#### Select 选择器（1个）
+- 运行模式（制冷/制热/通风/除湿）
+
+#### Number 数值（3个）
+- 新风风速（0-100%）
+- 制热供水设定点
+- 制冷供水设定点
+
+### 本地测试
+
+#### 方式一：Docker 启动 Home Assistant（推荐）
+
+```bash
+# 1. 创建配置目录
+mkdir -p ~/homeassistant
+
+# 2. 启动 Home Assistant 容器
+docker run -d \
+  --name homeassistant \
+  --privileged \
+  --restart=unless-stopped \
+  -e TZ=Asia/Shanghai \
+  -v ~/homeassistant:/config \
+  --network host \
+  ghcr.io/home-assistant/home-assistant:stable
+
+# 3. 等待启动完成（约1-2分钟），访问 http://localhost:8123
+# 首次访问需要创建管理员账号
+
+# 4. 安装集成（使用符号链接方便开发调试）
+mkdir -p ~/homeassistant/custom_components
+ln -s $(pwd)/custom_components/hvac_modbus ~/homeassistant/custom_components/hvac_modbus
+
+# 5. 重启容器使集成生效
+docker restart homeassistant
+```
+
+#### 方式二：使用现有 Home Assistant
+
+```bash
+# 复制集成到 HA 配置目录
+cp -r custom_components/hvac_modbus /path/to/homeassistant/custom_components/
+
+# 重启 Home Assistant
+# HA OS: ha core restart
+# Docker: docker restart homeassistant
+# venv: sudo systemctl restart home-assistant@homeassistant
+```
+
+#### 配置集成
+
+1. 打开 Home Assistant Web 界面（http://localhost:8123）
+2. 进入 **设置** > **设备与服务**
+3. 点击右下角 **添加集成** 按钮
+4. 搜索 "HVAC Modbus"
+5. 输入后端地址：
+   - 主机：`host.docker.internal`（Docker Desktop Mac/Windows）或 `172.17.0.1`（Linux）
+   - 端口：`8000`
+6. 点击提交完成配置
+
+#### 验证实体
+
+在 HA 中检查：
+- **开发者工具** > **状态**：搜索 `hvac` 查看所有实体
+- **概览** 页面添加实体卡片验证数据显示
+
+#### 开发调试
+
+查看 Home Assistant 日志：
+```bash
+# Docker 方式
+docker logs homeassistant -f
+
+# HA OS
+ha core logs
+
+# venv
+journalctl -u home-assistant -f
+```
+
+### 使用示例
+
+#### 自动化示例：离家自动关闭
+
+```yaml
+automation:
+  - alias: "离家关闭HVAC"
+    trigger:
+      - platform: state
+        entity_id: input_boolean.away_mode
+        to: "on"
+    action:
+      - service: switch.turn_off
+        target:
+          entity_id: switch.hvac_system_power
+```
+
+#### 自动化示例：温度过高告警
+
+```yaml
+automation:
+  - alias: "客厅温度过高告警"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.hvac_living_room_temp
+        above: 28
+    action:
+      - service: notify.mobile_app
+        data:
+          message: "客厅温度过高"
+```
+
+### 故障排查
+
+**问题：实体显示 unavailable**
+- 检查后端服务是否运行
+- 检查 Home Assistant 能否访问后端地址
+- 查看 Home Assistant 日志中的错误信息
+
+**问题：控制命令无响应**
+- 确认后端 Modbus 连接正常
+- 检查后端日志是否有错误
+- 尝试重启后端服务
+
+**问题：Docker 网络无法连接 localhost**
+- 使用宿主机 IP 替代 localhost
+- Docker Desktop (Mac/Windows)：`host.docker.internal`
+- Docker Linux：`172.17.0.1` 或添加 `--network host`
+
+**问题：集成找不到**
+- 确认 custom_components 目录正确
+- 确认目录结构为 `custom_components/hvac_modbus/__init__.py`
+- 重启 Home Assistant
+
+**问题：配置时连接失败**
+- 确认 HVAC 后端已启动并监听正确端口
+- 检查防火墙是否阻止连接
+- 使用 `curl http://localhost:8000/health` 测试后端是否正常
