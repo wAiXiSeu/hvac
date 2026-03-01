@@ -116,10 +116,14 @@ Home Assistant --> Modbus TCP --> HVAC 设备 (192.168.110.200:502)
 
 #### 方式二：HACS 安装
 
-1. 在 HACS 中添加自定义仓库
-2. 选择 "Integration" 类型
-3. 输入仓库 URL 并安装
-4. 重启 Home Assistant
+1. 打开 Home Assistant，进入 **HACS** > **集成**
+2. 点击右上角 **⋮** 菜单，选择 **自定义仓库**
+3. 添加仓库：
+   - 仓库 URL：`https://github.com/wAiXiSeu/hvac`
+   - 类别：选择 **Integration**
+4. 点击 **添加**，等待仓库加载完成
+5. 在 HACS 集成列表中找到 **HVAC Modbus**，点击 **下载**
+6. 下载完成后重启 Home Assistant
 
 ### 配置集成
 
@@ -162,6 +166,151 @@ Home Assistant --> Modbus TCP --> HVAC 设备 (192.168.110.200:502)
 - 新风风速（0-100%）
 - 制热供水设定点
 - 制冷供水设定点
+
+### 温度单位设置
+
+集成默认使用摄氏度（°C）。如果 Home Assistant 显示华氏度（°F），请修改全局设置：
+
+1. 进入 **设置** > **一般设置**
+2. 找到 **单位系统**
+3. 选择 **公制** 或将温度单位改为 **摄氏度**
+
+或在 `configuration.yaml` 中添加：
+```yaml
+homeassistant:
+  unit_system: metric
+```
+
+### 控制操作说明
+
+#### 恒温器控制
+
+每个房间的恒温器支持：
+- **查看当前温度**：显示房间实时温度
+- **设定目标温度**：点击 +/- 按钮或拖动滑块调整
+- **切换模式**：选择制热、制冷或关闭
+- **预设模式**：在家模式 / 离家模式
+
+#### 系统开关
+
+| 开关 | 功能 | 说明 |
+|------|------|------|
+| 系统电源 | 总开关 | 关闭后整个系统停止运行 |
+| 在家模式 | 模式切换 | 离家时关闭可节能 |
+| 厨卫辐射 | 厨卫地暖 | 控制厨房卫生间辐射供暖 |
+| 加湿功能 | 加湿器 | 控制新风加湿功能 |
+
+#### 运行模式
+
+| 模式 | 说明 |
+|------|------|
+| 制冷 | 夏季制冷模式 |
+| 制热 | 冬季制热模式 |
+| 通风 | 仅通风不调温 |
+| 除湿 | 除湿模式 |
+
+### Dashboard 配置示例
+
+#### 添加恒温器卡片
+
+```yaml
+type: thermostat
+entity: climate.hvac_living_room
+name: 客厅恒温器
+```
+
+#### 添加传感器卡片
+
+```yaml
+type: glance
+title: 室内环境
+entities:
+  - entity: sensor.hvac_living_room_temp
+    name: 客厅温度
+  - entity: sensor.hvac_living_room_humidity
+    name: 客厅湿度
+  - entity: sensor.hvac_env_indoor_pm25
+    name: PM2.5
+  - entity: sensor.hvac_env_indoor_co2
+    name: CO2
+```
+
+#### 添加控制面板
+
+```yaml
+type: entities
+title: HVAC 控制
+entities:
+  - entity: switch.hvac_system_power
+    name: 系统电源
+  - entity: switch.hvac_home_mode
+    name: 在家模式
+  - entity: select.hvac_run_mode
+    name: 运行模式
+  - entity: number.hvac_fan_speed
+    name: 新风风速
+```
+
+### 实体完整列表
+
+#### Climate 恒温器
+
+| 实体 ID | 名称 |
+|---------|------|
+| climate.hvac_living_room | 客厅恒温器 |
+| climate.hvac_master_bedroom | 主卧恒温器 |
+| climate.hvac_second_bedroom | 次卧恒温器 |
+| climate.hvac_study_room | 书房恒温器 |
+
+#### Sensor 传感器
+
+| 实体 ID | 名称 |
+|---------|------|
+| sensor.hvac_env_indoor_pm25 | 室内 PM2.5 |
+| sensor.hvac_env_indoor_co2 | 室内 CO2 |
+| sensor.hvac_env_outdoor_temp | 室外温度 |
+| sensor.hvac_env_outdoor_humidity | 室外湿度 |
+| sensor.hvac_living_room_temp | 客厅温度 |
+| sensor.hvac_living_room_humidity | 客厅湿度 |
+| sensor.hvac_living_room_dew_point | 客厅露点 |
+| sensor.hvac_master_bedroom_temp | 主卧温度 |
+| sensor.hvac_master_bedroom_humidity | 主卧湿度 |
+| sensor.hvac_master_bedroom_dew_point | 主卧露点 |
+| sensor.hvac_second_bedroom_temp | 次卧温度 |
+| sensor.hvac_second_bedroom_humidity | 次卧湿度 |
+| sensor.hvac_second_bedroom_dew_point | 次卧露点 |
+| sensor.hvac_study_room_temp | 书房温度 |
+| sensor.hvac_study_room_humidity | 书房湿度 |
+| sensor.hvac_study_room_dew_point | 书房露点 |
+| sensor.hvac_york_supply_temp | 约克供水温度 |
+| sensor.hvac_york_return_temp | 约克回水温度 |
+| sensor.hvac_fresh_air_compressor_freq | 新风压缩机频率 |
+| sensor.hvac_fresh_air_supply_temp | 新风供水温度 |
+| sensor.hvac_fresh_air_return_temp | 新风回水温度 |
+| sensor.hvac_connection_status | HVAC 连接状态 |
+
+#### Switch 开关
+
+| 实体 ID | 名称 |
+|---------|------|
+| switch.hvac_system_power | 系统电源 |
+| switch.hvac_home_mode | 在家模式 |
+| switch.hvac_kitchen_radiant | 厨卫辐射 |
+| switch.hvac_humidifier | 加湿功能 |
+
+#### Select 选择器
+
+| 实体 ID | 名称 | 选项 |
+|---------|------|------|
+| select.hvac_run_mode | 运行模式 | 制冷/制热/通风/除湿 |
+
+#### Number 数值
+
+| 实体 ID | 名称 | 范围 |
+|---------|------|------|
+| number.hvac_fan_speed | 新风风速 | 0-100% |
+| number.hvac_heating_setpoint | 制热供水设定点 | 30-60°C |
+| number.hvac_cooling_setpoint | 制冷供水设定点 | 5-30°C |
 
 ### 本地测试
 
