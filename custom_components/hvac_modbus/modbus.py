@@ -172,6 +172,8 @@ class HVACModbusClient:
                 "humidity": self._get_scaled_value(raw_data, room_config["humidity"]),
                 "dew_point": self._get_scaled_value(raw_data, room_config["dew_point"]),
                 "setpoint": self._get_scaled_value(raw_data, room_config["setpoint"]),
+                "radiant": raw_data.get(room_config.get("radiant", 0), 0) == 1 if "radiant" in room_config else None,
+                "design_temp": self._get_scaled_value(raw_data, room_config.get("design_temp")) if "design_temp" in room_config else None,
             }
             result["rooms"].append(room_data)
 
@@ -181,6 +183,12 @@ class HVACModbusClient:
             "home_mode": raw_data.get(1034, 0) == 1,
             "run_mode": raw_data.get(1041, 1),
             "fan_speed": raw_data.get(1047, 0),
+            # 新增系统阈值
+            "heating_supply_temp_limit": self._get_scaled_value(raw_data, 1035),
+            "cooling_supply_temp_set": self._get_scaled_value(raw_data, 1036),
+            "humidity_stop_limit": raw_data.get(1037),
+            "humidity_start_point": raw_data.get(1048),
+            "fresh_air_outlet_humidity": self._get_scaled_value(raw_data, 1046),
         }
 
         # Parse environment data
@@ -195,6 +203,7 @@ class HVACModbusClient:
         result["york"] = {
             "supply_temp": self._get_scaled_value(raw_data, 1029),
             "return_temp": self._get_scaled_value(raw_data, 1030),
+            "run_mode_feedback": raw_data.get(1031),
             "heating_setpoint": self._get_scaled_value(raw_data, 1062),
             "cooling_setpoint": self._get_scaled_value(raw_data, 1066),
         }
@@ -202,6 +211,8 @@ class HVACModbusClient:
         # Parse fresh air data
         result["fresh_air"] = {
             "compressor_freq": self._get_scaled_value(raw_data, 1161),
+            "total_current": self._get_scaled_value(raw_data, 1162),
+            "compressor_current": self._get_scaled_value(raw_data, 1163),
             "supply_temp": self._get_scaled_value(raw_data, 1164),
             "return_temp": self._get_scaled_value(raw_data, 1165),
             "humidifier": raw_data.get(1168, 0) == 1,
@@ -285,6 +296,25 @@ class HVACModbusClient:
         """Set cooling supply water setpoint."""
         raw_value = unscale_value(temperature, 1066)
         return await self.write_register(1066, raw_value)
+
+    async def set_room_radiant(self, room_id: str, on: bool) -> bool:
+        """Set room radiant switch."""
+        if room_id not in ROOMS:
+            _LOGGER.error("Invalid room_id: %s", room_id)
+            return False
+        room_config = ROOMS[room_id]
+        if "radiant" not in room_config:
+            _LOGGER.error("Room %s does not have radiant control", room_id)
+            return False
+        address = room_config["radiant"]
+        return await self.write_register(address, 1 if on else 0)
+
+    async def set_humidity_start_point(self, humidity: int) -> bool:
+        """Set humidity start point for humidifier."""
+        if not 0 <= humidity <= 100:
+            _LOGGER.error("Invalid humidity start point: %s", humidity)
+            return False
+        return await self.write_register(1048, humidity)
 
     async def test_connection(self) -> bool:
         """Test connection to the Modbus device."""

@@ -29,6 +29,7 @@ async def async_setup_entry(
         HVACFanSpeedNumber(coordinator, modbus),
         HVACHeatingSetpointNumber(coordinator, modbus),
         HVACCoolingSetpointNumber(coordinator, modbus),
+        HVACHumidityStartPointNumber(coordinator, modbus),
     ]
     
     async_add_entities(entities)
@@ -143,6 +144,47 @@ class HVACCoolingSetpointNumber(NumberEntity):
     async def async_set_native_value(self, value: float) -> None:
         """Set the value."""
         await self._modbus.set_cooling_setpoint(value)
+        await self.coordinator.async_request_refresh()
+
+    @property
+    def available(self) -> bool:
+        """Return if entity is available."""
+        return self.coordinator.last_update_success
+
+    async def async_added_to_hass(self) -> None:
+        """When entity is added to hass."""
+        self.async_on_remove(
+            self.coordinator.async_add_listener(self.async_write_ha_state)
+        )
+
+
+class HVACHumidityStartPointNumber(NumberEntity):
+    """Number entity for humidity start point."""
+
+    _attr_has_entity_name = True
+    _attr_name = "加湿启动湿度起点"
+    _attr_unique_id = "hvac_humidity_start_point"
+    _attr_device_class = NumberDeviceClass.HUMIDITY
+    _attr_native_unit_of_measurement = PERCENTAGE
+    _attr_native_min_value = 0.0
+    _attr_native_max_value = 100.0
+    _attr_native_step = 1.0
+    _attr_icon = "mdi:water-percent"
+
+    def __init__(self, coordinator: HVACDataCoordinator, modbus) -> None:
+        """Initialize the number."""
+        self.coordinator = coordinator
+        self._modbus = modbus
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the current value."""
+        system_data = self.coordinator.get_system_data()
+        return system_data.get("humidity_start_point")
+
+    async def async_set_native_value(self, value: float) -> None:
+        """Set the value."""
+        await self._modbus.set_humidity_start_point(int(value))
         await self.coordinator.async_request_refresh()
 
     @property
