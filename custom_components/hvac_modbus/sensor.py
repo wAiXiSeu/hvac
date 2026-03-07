@@ -64,6 +64,7 @@ async def async_setup_entry(
     
     # Fresh air sensors (扩展)
     entities.extend([
+        HVACFreshAirStatusCodeSensor(coordinator, "status_code1", "新风机状态码"),
         HVACFreshAirSensor(coordinator, "compressor_freq", "新风压缩机频率", SensorDeviceClass.FREQUENCY, UnitOfFrequency.HERTZ),
         HVACFreshAirSensor(coordinator, "total_current", "新风机整机电流", SensorDeviceClass.CURRENT, UnitOfElectricCurrent.AMPERE),
         HVACFreshAirSensor(coordinator, "compressor_current", "新风机压缩机电流", SensorDeviceClass.CURRENT, UnitOfElectricCurrent.AMPERE),
@@ -228,6 +229,63 @@ class HVACFreshAirSensor(SensorEntity):
         """Return the native value."""
         fresh_air_data = self.coordinator.get_fresh_air_data()
         return fresh_air_data.get(self._data_key)
+
+    @property
+    def available(self) -> bool:
+        """Return if entity is available."""
+        return self.coordinator.last_update_success
+
+    async def async_added_to_hass(self) -> None:
+        """When entity is added to hass."""
+        self.async_on_remove(
+            self.coordinator.async_add_listener(self.async_write_ha_state)
+        )
+
+
+class HVACFreshAirStatusCodeSensor(SensorEntity):
+    """Sensor entity for fresh air status code."""
+
+    _attr_has_entity_name = True
+    _attr_icon = "mdi:information-outline"
+
+    def __init__(
+        self,
+        coordinator: HVACDataCoordinator,
+        data_key: str,
+        name: str,
+    ) -> None:
+        """Initialize the sensor."""
+        self.coordinator = coordinator
+        self._data_key = data_key
+        self._attr_unique_id = f"hvac_fresh_air_{data_key}"
+        self._attr_name = name
+
+    @property
+    def native_value(self) -> str | None:
+        """Return the native value as hex string."""
+        fresh_air_data = self.coordinator.get_fresh_air_data()
+        value = fresh_air_data.get(self._data_key)
+        if value is not None:
+            return f"0x{value:04X}"
+        return None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return additional state attributes."""
+        fresh_air_data = self.coordinator.get_fresh_air_data()
+        value = fresh_air_data.get(self._data_key)
+        attrs = {}
+        if value is not None:
+            attrs["raw_value"] = value
+            attrs["decimal"] = value
+            attrs["hex"] = f"0x{value:04X}"
+            attrs["binary"] = f"0b{value:016b}"
+            # 状态描述
+            if value == 0x8104:
+                attrs["status"] = "正常运行"
+            else:
+                attrs["status"] = "未知状态"
+        return attrs
 
     @property
     def available(self) -> bool:

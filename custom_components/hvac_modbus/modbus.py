@@ -210,6 +210,7 @@ class HVACModbusClient:
 
         # Parse fresh air data
         result["fresh_air"] = {
+            "status_code1": raw_data.get(1049),
             "compressor_freq": self._get_scaled_value(raw_data, 1161),
             "total_current": self._get_scaled_value(raw_data, 1162),
             "compressor_current": self._get_scaled_value(raw_data, 1163),

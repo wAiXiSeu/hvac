@@ -1,7 +1,7 @@
 {
   "domain": "hvac_modbus",
   "name": "HVAC Modbus",
-  "version": "2.0.0",
+  "version": "2.0.2",
   "documentation": "https://github.com/user/hvac",
   "dependencies": [],
   "codeowners": ["@user"],
